@@ -1,0 +1,18 @@
+/*Archivo de css para  el punto 5 de regresion logistica */
+
+:root {
+    /* Colores generales de la pagina*/
+    --bg-color: #0e0e11;
+    --text-color: #ab0db1;
+
+    /*Colores o variables para los efectos translucidos*/
+    --glass-bg:rgba(255, 255, 255, 0.08);
+    --glass-border: rgba(255, 255, 255, 0.15);
+
+    /*Tipografia de los datos*/
+    --title-size: clamp(18px, 4.5vw + 1rem, 56px);
+
+    /*Bordes de los botones*/
+    --border-gradient: linear-gradient(135deg, #a855f7, #ec4899);
+
+}
