@@ -1,5 +1,127 @@
 /* Css de la pagina index */
+:root {
+    /* Colores generales de la pagina*/
+    --bg-color: #0e0e11;
+    --text-color: #ab0db1;
+
+    /*Colores o variables para los efectos translucidos*/
+    --glass-bg:rgba(255, 255, 255, 0.08);
+    --glass-border: rgba(255, 255, 255, 0.15);
+
+    /*Tipografia de los datos*/
+    --title-size: clamp(18px, 4.5vw + 1rem, 56px);
+
+    /*Bordes de los botones*/
+    --border-gradient: linear-gradient(135deg, #a855f7, #ec4899);
+
+}
+
+/* Estilo para el titulo principal*/
 h1 {
-    font-size: 45px;
+    font-size: var(--title-size);
     font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    text-align: center;
+    background: url(https://imgs.search.brave.com/lwAlrX-bi2otFZParn-cJdIhDkaLMBlIcOp5P22XMd0/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9hcmdp/bmRhci5jb20vd3At/Y29udGVudC91cGxv/YWRzLzIwMTYvMDUv/TGFjLWRlLWxlb24t/UGFpc2FqZS1lbi1i/bGFuY28teS1uZWdy/by5qcGc);
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    background-position: center;
+    background-size: cover;
+
+
+    word-break: break-word;
+    hyphens: auto;
+    line-height: 1.2;
+
+    padding: 1.5rem 2rem;
+    margin: 0;
+
+    color: var(--text-color);
+
+    letter-spacing: 0.04em;
+    text-shadow: 0 4px 15px rgba(0,0,0,0.6);
+}
+
+/*Cuerpo de la pagina*/
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+}
+
+/* =========================
+   BOTONES / MENU PRINCIPAL
+========================= */
+
+.menu {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 24px;
+    padding: 2rem;
+    max-width: 1100px;
+    margin: auto;
+    justify-items: center;
+}
+
+.menu-btn {
+    width: 100%;
+    max-width: 230px;
+    text-decoration: none;
+    color: var(--text-color);
+
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px);
+
+    border-radius: 16px;
+    padding: 24px 20px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+    transition: all 0.3s ease;
+    position: relative;
+
+}
+
+.menu-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    padding: 2px; /* grosor del borde */
+
+    background: var(--border-gradient);
+
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+
+    pointer-events: none;
+}
+
+.menu-btn:hover::before {
+    padding: 3px;
+}
+
+.menu-btn span {
+    font-size: 1rem;
+    margin-bottom: 12px;
+}
+
+.menu-btn i {
+    font-size: 2.2rem;
+}
+
+/* Hover elegante */
+.menu-btn:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+    background: rgba(255, 255, 255, 0.12);
 }
