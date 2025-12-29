@@ -21,6 +21,19 @@
 
     <br/>
 
+    <section class="upload glass">
+        <label class="upload-box">
+            <input type="file" id="DataSetInput" accept=".csv, .txt, .json">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>Selecciona tu DataSet</span>
+            <small>CSV, TXT, O JSON</small>
+        </label>
+        <p class="upload-status" id="uploadStatus">
+            Ningun Archivo Cargado
+        </p>
+    </section>
+
+    <br/>
     <!-- CONTENEDOR DE BOTONES -->
     <section class="menu">
         <a href="regresion_log.html" class="menu-btn">
@@ -52,6 +65,6 @@
     © 2025 — Diego López · Todos los derechos reservados
     </footer>
 
-
+    <script src="/frontend/js/cargar_archivo.js"></script>
 </body>
 </html>
