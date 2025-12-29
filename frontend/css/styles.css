@@ -30,12 +30,6 @@ h1 {
     font-size: var(--title-size);
     font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
     text-align: center;
-    background: url(https://imgs.search.brave.com/lwAlrX-bi2otFZParn-cJdIhDkaLMBlIcOp5P22XMd0/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9hcmdp/bmRhci5jb20vd3At/Y29udGVudC91cGxv/YWRzLzIwMTYvMDUv/TGFjLWRlLWxlb24t/UGFpc2FqZS1lbi1i/bGFuY28teS1uZWdy/by5qcGc);
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    background-position: center;
-    background-size: cover;
-
     word-break: break-word;
     hyphens: auto;
     line-height: 1.2;
@@ -44,7 +38,29 @@ h1 {
     margin: 0;
 
     letter-spacing: 0.04em;
-    text-shadow: 0 4px 15px rgba(0,0,0,0.6);
+
+    /* Reemplazar text-shadow simple por un brillo sutil + neón */
+    text-shadow: 
+        0 0 8px rgba(168, 85, 247, 0.4),
+        0 0 16px rgba(236, 72, 153, 0.3),
+        0 4px 12px rgba(0, 0, 0, 0.5);
+
+    /* Opcional: degradado de texto  */
+    background: linear-gradient(135deg, #a855f7, #ec4899);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent; 
+    /* Nota: esto reemplaza el uso de `var(--text-color)` */
+
+    /* Añadir un efecto sutil de brillo al pasar el ratón */
+    transition: text-shadow 0.4s ease;
+}
+
+h1:hover {
+    text-shadow: 
+        0 0 12px rgba(168, 85, 247, 0.7),
+        0 0 24px rgba(236, 72, 153, 0.6),
+        0 6px 18px rgba(0, 0, 0, 0.6);
 }
 
 /* UPLOAD DATASET */
