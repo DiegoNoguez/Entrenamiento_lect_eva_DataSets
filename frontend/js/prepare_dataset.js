@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-        const response = await fetch("http://localhost:8000/apis/prepare_dataset/", {
+        const response = await fetch(`${API_BASE_URL}/apis/prepare_dataset/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ dataset_id: datasetId })

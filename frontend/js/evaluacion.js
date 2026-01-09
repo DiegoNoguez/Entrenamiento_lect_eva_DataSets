@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
 
-    const response = await fetch("http://localhost:8000/apis/evaluar_modelo/", {
+    const response = await fetch(`${API_BASE_URL}/apis/evaluar_modelo/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataset_id: datasetId })
@@ -53,5 +53,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
 
     document.getElementById("confusion-img").src =
-        `http://localhost:8000${data.metrics.confusion_matrix_image}`;
+        `${API_BASE_URL}${data.metrics.confusion_matrix_image}`;
 });

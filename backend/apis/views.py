@@ -3,7 +3,6 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import default_storage
-import uuid
 from django.conf import settings
 import os,json, base64, gzip, io 
 from io import BytesIO
@@ -15,6 +14,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt 
 import math
+import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import RobustScaler, OneHotEncoder
@@ -23,7 +23,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-
+from pandas.plotting import scatter_matrix
 # Funciones auxiliares y para los enpoints 
 # Paleta de colores para los histogramas para division del dataset 
 COLOR_MAP = {
@@ -269,6 +269,138 @@ def save_confusion_matrix_image(cm, labels, media_root):
 
     return f"/media/evaluations/{filename}"
 
+def generate_correlation_plots(df, dataset_id):
+    plots = []
+
+    # Columnas exactas que queremos en el scatter matrix
+    attributes = ["same_srv_rate", "dst_host_srv_count", "class", "dst_host_same_srv_rate"]
+
+    # Verificar que existan en el DataFrame
+    attributes = [col for col in attributes if col in df.columns]
+    if not attributes:
+        return plots
+
+    # Crear figura scatter_matrix
+    fig = scatter_matrix(
+        df[attributes],
+        diagonal="hist",
+        figsize=(12, 8)
+    )
+
+    plt.suptitle("Scatter Matrix", fontsize=16, fontweight="bold")
+
+    # Guardar en buffer y convertir a base64
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=100)
+    plt.close()
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+
+    plots.append({
+        "type": "scatter_matrix",
+        "title": "Scatter Matrix",
+        "columns": attributes,
+        "image_base64": f"data:image/png;base64,{img_base64}"
+    })
+
+    return plots
+
+# =========================
+# Funciones de visualización
+# =========================
+
+def generate_plots_base64(df):
+    """Genera histogramas/barras por columna y devuelve base64"""
+    plots = []
+    for col in df.columns:
+        fig, ax = plt.subplots(figsize=(6,4))
+        if np.issubdtype(df[col].dtype, np.number):
+            df[col].plot(kind='hist', bins=30, ax=ax, color='skyblue', edgecolor='black')
+        else:
+            df[col].value_counts().head(10).plot(kind='bar', ax=ax, color='salmon', edgecolor='black')
+            ax.tick_params(axis='x', rotation=45)
+        ax.set_title(col)
+        ax.grid(axis='y', linestyle='--', alpha=0.7)
+        plt.tight_layout()
+
+        buf = BytesIO()
+        plt.savefig(buf, format='png', dpi=100)
+        plt.close()
+        buf.seek(0)
+        img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+        plots.append({
+            "column": col,
+            "title": f"Distribución de {col}",
+            "image_base64": f"data:image/png;base64,{img_base64}",
+            "url": ""
+        })
+    return plots
+
+
+def generate_scatter_matrix_base64(df, attributes=None):
+    """Genera scatter_matrix en base64. Si no se pasan atributos, usa columnas numéricas"""
+    plots = []
+    if attributes is None:
+        attributes = df.select_dtypes(include=[np.number]).columns.tolist()
+    else:
+        attributes = [col for col in attributes if col in df.columns]
+
+    if not attributes:
+        return plots
+
+    fig = scatter_matrix(df[attributes], diagonal="hist", figsize=(12, 8))
+    plt.suptitle("Scatter Matrix", fontsize=16, fontweight="bold")
+
+    buf = BytesIO()
+    plt.savefig(buf, format='png', dpi=100)
+    plt.close()
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+
+    plots.append({
+        "type": "scatter_matrix",
+        "title": "Scatter Matrix",
+        "columns": attributes,
+        "image_base64": f"data:image/png;base64,{img_base64}",
+        "url": ""
+    })
+    return plots
+
+
+def generate_confusion_matrix_base64(y_true, y_pred):
+    """Genera matriz de confusión en base64"""
+    labels = sorted(np.unique(y_true))
+    cm = confusion_matrix(y_true, y_pred, labels=labels)
+
+    fig, ax = plt.subplots(figsize=(5,4))
+    cax = ax.matshow(cm, cmap="Blues")
+    plt.title("Matriz de Confusión")
+    plt.xlabel("Predicción")
+    plt.ylabel("Real")
+    plt.colorbar(cax)
+    ax.set_xticks(range(len(labels)))
+    ax.set_yticks(range(len(labels)))
+    ax.set_xticklabels(labels)
+    ax.set_yticklabels(labels)
+    for i in range(len(labels)):
+        for j in range(len(labels)):
+            ax.text(j, i, str(cm[i,j]), ha="center", va="center")
+
+    buf = BytesIO()
+    plt.tight_layout()
+    plt.savefig(buf, format='png', dpi=100)
+    plt.close()
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+
+    return [{
+        "type": "confusion_matrix",
+        "title": "Matriz de Confusión",
+        "image_base64": f"data:image/png;base64,{img_base64}",
+        "url": ""
+    }]
+
+
 # Clases para usar en el uso de creacion de los pipelines y transformadores
 class DeleteNanRows(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
@@ -376,54 +508,47 @@ def visualizar_dataset(request):
         return JsonResponse({"error": "dataset_id requerido"}, status=400)
 
     datasets_dir = os.path.join(settings.MEDIA_ROOT, "datasets")
-    archivo = None
-
-    for f in os.listdir(datasets_dir):
-        if f.startswith(dataset_id):
-            archivo = f
-            break
-
+    archivo = next((f for f in os.listdir(datasets_dir) if f.startswith(dataset_id)), None)
     if not archivo:
         return JsonResponse({"error": "Dataset no encontrado"}, status=404)
 
     file_path = os.path.join(datasets_dir, archivo)
 
-    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-        head_text = "".join(f.readlines()[:20])
+    # Cargar dataset NSL-KDD
+    df = load_kdd_dataset(file_path)
+    df.columns = [c.strip().lower() for c in df.columns]
 
-    file_format = detect_format(archivo, head_text)
+    # Previsualización
+    preview = {
+        "columns": list(df.columns),
+        "rows": df.head(options.get("preview_rows", 10)).to_dict(orient="records")
+    }
 
-    try:
-        if file_format == "arff":
-            df = load_arff_dataframe(file_path)
-        elif file_format == "csv":
-            df = load_csv_dataframe(file_path)
-        elif file_format == "txt":
-            df = load_txt_dataframe(file_path)
-        else:
-            return JsonResponse(
-                {"error": f"Formato no soportado: {file_format}"},
-                status=400
-            )
-    except Exception as e:
-        return JsonResponse(
-            {"error": f"Error al leer dataset: {str(e)}"},
-            status=500
-        )
+    # Info
+    info = dataframe_info(df)
+
+    # Plots
+    plots = generate_plots_base64(df)
+    correlation_plots = generate_scatter_matrix_base64(df, attributes=[
+        "same_srv_rate", "dst_host_srv_count", "class", "dst_host_same_srv_rate"
+    ])
+
+    # Matriz de confusión dummy (solo ejemplo)
+    confusion_matrix_plot = generate_confusion_matrix_base64(
+        y_true=df["class"][:50],
+        y_pred=df["class"][:50]
+    )
 
     response = {
         "dataset_id": dataset_id,
         "filename": archivo,
-        "format": file_format,
         "rows": int(df.shape[0]),
         "columns": int(df.shape[1]),
-        "preview": {
-            "columns": list(df.columns),
-            "rows": df.head(options.get("preview_rows", 10))
-                     .to_dict(orient="records")
-        },
-        "info": dataframe_info(df),
-        "plots": generate_plots(df, dataset_id)
+        "preview": preview,
+        "info": info,
+        "plots": plots,
+        "correlation_plots": correlation_plots,
+        "confusion_matrix": confusion_matrix_plot
     }
 
     return JsonResponse(response)

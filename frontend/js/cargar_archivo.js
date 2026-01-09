@@ -50,7 +50,7 @@ window.addEventListener("DOMContentLoaded", () => {
             const formData = new FormData();
             formData.append("dataset", file);
 
-            const response = await fetch("http://localhost:8000/apis/upload_dataset/", {
+            const response = await fetch(`${API_BASE_URL}/apis/upload_dataset/`, {
                 method: "POST",
                 body: formData
             });

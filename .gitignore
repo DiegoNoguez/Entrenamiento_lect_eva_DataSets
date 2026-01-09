@@ -2,3 +2,4 @@
 .envDev
 __pycache__
 media
+backend/backend/__pycache__

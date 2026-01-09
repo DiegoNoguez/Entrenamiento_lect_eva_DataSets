@@ -1,4 +1,3 @@
-// Fucniones Auxiliares para ocupar el fetch 
 function renderMeta(data) {
     document.getElementById("dataset-meta").innerHTML = `
         <p><strong>Archivo:</strong> ${data.filename}</p>
@@ -8,47 +7,31 @@ function renderMeta(data) {
 }
 
 function renderPreview(preview) {
-    const container = document.getElementById("preview-table");
-
-    let html = "<table><thead><tr>";
+    let html = "<table class='table'><thead><tr>";
     preview.columns.forEach(c => html += `<th>${c}</th>`);
     html += "</tr></thead><tbody>";
 
     preview.rows.forEach(row => {
         html += "<tr>";
-        preview.columns.forEach(c => {
-            html += `<td>${row[c]}</td>`;
-        });
+        preview.columns.forEach(c => html += `<td>${row[c]}</td>`);
         html += "</tr>";
     });
 
     html += "</tbody></table>";
-    container.innerHTML = html;
+    document.getElementById("preview-table").innerHTML = html;
 }
 
 function renderInfo(info) {
-    let html = `
-        <p>Total filas: ${info.total_filas}</p>
-        <p>Total columnas: ${info.total_columnas}</p>
-        <table>
-            <thead>
-                <tr>
-                    <th>Columna</th>
-                    <th>Tipo</th>
-                    <th>No nulos</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
+    let html = `<table class="table"><thead>
+        <tr><th>Columna</th><th>Tipo</th><th>No Nulos</th></tr>
+    </thead><tbody>`;
 
-    info.columns.forEach(col => {
-        html += `
-            <tr>
-                <td>${col.name}</td>
-                <td>${col.dtype}</td>
-                <td>${col.non_null}</td>
-            </tr>
-        `;
+    info.columns.forEach(c => {
+        html += `<tr>
+            <td>${c.name}</td>
+            <td>${c.dtype}</td>
+            <td>${c.non_null}</td>
+        </tr>`;
     });
 
     html += "</tbody></table>";
@@ -60,69 +43,61 @@ function renderPlots(plots) {
     container.innerHTML = "";
 
     plots.forEach(p => {
-        const div = document.createElement("div");
-        div.className = "plot-card";
-
-        div.innerHTML = `
-            <h4>
-                ${p.column}
-                ${p.category !== null ? `→ ${p.category}` : ""}
-            </h4>
-            <img src="http://localhost:8000${p.url}" alt="plot">
-        `;
-
-        container.appendChild(div);
+        const imgSrc = p.image_base64 ? p.image_base64 : `${API_BASE_URL}${p.url}`;
+        container.innerHTML += `
+            <div class="plot-card">
+                <h4>${p.column || p.title}</h4>
+                <img src="${imgSrc}">
+            </div>`;
     });
 }
 
+function renderCorrelationPlots(plots) {
+    const container = document.getElementById("plots-container");
 
-// CUerpo general del fetch 
-window.addEventListener("DOMContentLoaded", async () => {
+    plots.forEach(p => {
+        const imgSrc = p.image_base64 ? p.image_base64 : `${API_BASE_URL}${p.url}`;
+        container.innerHTML += `
+            <div class="plot-card">
+                <h4>${p.title}</h4>
+                <img src="${imgSrc}">
+            </div>`;
+    });
+}
 
+function renderConfusionMatrix(plots) {
+    const container = document.getElementById("plots-container");
+
+    plots.forEach(p => {
+        const imgSrc = p.image_base64 ? p.image_base64 : `${API_BASE_URL}${p.url}`;
+        container.innerHTML += `
+            <div class="plot-card">
+                <h4>${p.title}</h4>
+                <img src="${imgSrc}">
+            </div>`;
+    });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
     const datasetId = sessionStorage.getItem("dataset_id");
+    if (!datasetId) return alert("Dataset no cargado");
 
-    if (!datasetId) {
-        alert("No hay dataset cargado");
-        window.location.href = "index.html";
-        return;
-    }
+    const res = await fetch(`${API_BASE_URL}/apis/visualizar_dataset/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataset_id: datasetId })
+    });
 
-    try {
-        const response = await fetch("http://localhost:8000/apis/visualizar_dataset/", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                dataset_id: datasetId,
-                options: {
-                    preview: true,
-                    info: true
-                }
-            })
-        });
+    const data = await res.json();
 
-        if (!response.ok) throw new Error("Error al obtener dataset");
-
-        const data = await response.json();
-
-        renderMeta(data);
-        renderPreview(data.preview);
-        renderInfo(data.info);
-        renderPlots(data.plots);
-
-    } catch (err) {
-        console.error(err);
-        alert("Error al visualizar el dataset");
-    }
+    renderMeta(data);
+    renderPreview(data.preview);
+    renderInfo(data.info);
+    renderPlots(data.plots);
+    renderCorrelationPlots(data.correlation_plots);
+    renderConfusionMatrix(data.confusion_matrix);
 });
 
-// Botón Back
-const btnBack = document.getElementById("btn-back");
-if (btnBack) {
-    btnBack.addEventListener("click", () => {
-        window.location.href = "index.html"; 
-    });
-} else {
-    console.warn("El botón 'btn-back' no se encontró en el HTML");
-}
+document.getElementById("btn-back").onclick = () => {
+    window.location.href = "index.html";
+};

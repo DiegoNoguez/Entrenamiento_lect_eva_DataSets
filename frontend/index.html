@@ -1,81 +1,81 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>REGRESION LOGISTICA</title>
 
     <!-- CSS existente -->
-    <link rel="stylesheet" href="css/styles.css"/>
+    <link rel="stylesheet" href="css/styles.css" />
 
     <!-- Font Awesome (iconos) -->
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-</head>
-<body>
-
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+  </head>
+  <body>
     <section class="hero">
-        <div class="hero-bg"></div>
-        <h1 class="glass">Aplica la Regresión Lógistica en tus DataSets</h1>
+      <div class="hero-bg"></div>
+      <h1 class="glass">Aplica la Regresión Lógistica en tus DataSets</h1>
     </section>
 
-    <br/>
+    <br />
 
     <section class="upload glass">
-        <label class="upload-box">
-            <input type="file" id="DataSetInput" accept=".csv, .txt, .json">
-            <i class="fa-solid fa-cloud-arrow-up"></i>
-            <span>Selecciona tu DataSet</span>
-            <small>CSV, TXT, O JSON</small>
-        </label>
-        <p class="upload-status" id="uploadStatus"></p>
-        
-        <div id="datasetIndicator" class="dataset-indicator hidden">
+      <label class="upload-box">
+        <input type="file" id="DataSetInput" accept=".csv, .txt, .json" />
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <span>Selecciona tu DataSet</span>
+        <small>CSV, TXT, O JSON</small>
+      </label>
+      <p class="upload-status" id="uploadStatus"></p>
+
+      <div id="datasetIndicator" class="dataset-indicator hidden">
         <i class="fa-solid fa-circle-check"></i>
         <span>Dataset listo para procesar</span>
-        </div>
+      </div>
 
-        <button id="resetDataset" class="reset-btn hidden">
+      <button id="resetDataset" class="reset-btn hidden">
         Cambiar Dataset
-        </button>
-
+      </button>
     </section>
-    <br/>
+    <br />
     <!-- CONTENEDOR DE BOTONES -->
     <section class="menu">
-        <a href="regresion_log.html" class="menu-btn">
-            <span>Regresión Logística</span>
-            <i class="fa-solid fa-chart-line"></i>
-        </a>
+      <a href="regresion_log.html" class="menu-btn">
+        <span>Regresión Logística</span>
+        <i class="fa-solid fa-chart-line"></i>
+      </a>
 
-        <a href="visualizacion.html" class="menu-btn" data-require-dataset="true">
-            <span>Visualización del DataSet</span>
-            <i class="fa-solid fa-chart-pie"></i>
-        </a>
+      <a href="visualizacion.html" class="menu-btn" data-require-dataset="true">
+        <span>Visualización del DataSet</span>
+        <i class="fa-solid fa-chart-pie"></i>
+      </a>
 
-        <a href="division_data.html" class="menu-btn">
-            <span>División de DataSet</span>
-            <i class="fa-solid fa-code-fork"></i>
-        </a>
+      <a href="division_data.html" class="menu-btn">
+        <span>División de DataSet</span>
+        <i class="fa-solid fa-code-fork"></i>
+      </a>
 
-        <a href="prep_Data.html" class="menu-btn">
-            <span>Preparación del DataSet</span>
-            <i class="fa-solid fa-gears"></i>
-        </a>
+      <a href="prep_Data.html" class="menu-btn">
+        <span>Preparación del DataSet</span>
+        <i class="fa-solid fa-gears"></i>
+      </a>
 
-        <a href="pipelinesPersonalizados.html" class="menu-btn">
-            <span>Creación de Transformadores y pipelines</span>
-            <i class="fa-solid fa-project-diagram"></i>
-        </a>
-        <a href="eval_model.html" class="menu-btn">
-            <span>Evaluación del Resultados</span>
-            <i class="fa-solid fa-check-circle"></i>
-        </a>
+      <a href="pipelinesPersonalizados.html" class="menu-btn">
+        <span>Creación de Transformadores y pipelines</span>
+        <i class="fa-solid fa-project-diagram"></i>
+      </a>
+      <a href="eval_model.html" class="menu-btn">
+        <span>Evaluación del Resultados</span>
+        <i class="fa-solid fa-check-circle"></i>
+      </a>
     </section>
     <footer class="footer">
-    © 2025 — Diego López · Todos los derechos reservados
+      © 2025 — Diego López · Todos los derechos reservados
     </footer>
-
+    <script src="js/config.js"></script>
     <script src="js/cargar_archivo.js" defer></script>
-</body>
+  </body>
 </html>

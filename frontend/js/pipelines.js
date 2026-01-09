@@ -9,35 +9,35 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-        // 🔹 Llamada al endpoint comprimido
-        const response = await fetch("http://localhost:8000/apis/pipelines_personalizados/", {
+        //  Llamada al endpoint comprimido
+        const response = await fetch(`${API_BASE_URL}/apis/pipelines_personalizados/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ dataset_id: datasetId })
         });
 
-        // 🔹 Leer como texto (NO response.json())
+        //  Leer como texto (NO response.json())
         const compressedText = await response.text();
 
-        // 🔹 Parsear JSON de la envoltura {"compressed": "..."}
+        //  Parsear JSON de la envoltura {"compressed": "..."}
         const wrapper = JSON.parse(compressedText);
         if (!wrapper.compressed) throw new Error("No hay datos comprimidos en la respuesta.");
 
-        // 🔹 Decodificar base64
+        //  Decodificar base64
         const strData = atob(wrapper.compressed);
 
-        // 🔹 Convertir a Uint8Array para pako
+        //  Convertir a Uint8Array para pako
         const uint8 = new Uint8Array(strData.split("").map(c => c.charCodeAt(0)));
 
-        // 🔹 Descomprimir con pako
+        //  Descomprimir con pako
         const decompressed = pako.ungzip(uint8, { to: "string" });
 
-        // 🔹 Parsear JSON final
+        //  Parsear JSON final
         const data = JSON.parse(decompressed);
 
         status.textContent = "Procesamiento completado";
 
-        // 🔹 Renderizar tablas
+        //  Renderizar tablas
         renderSection("X_train original", data.x_train_original);
         renderSection("X_train con NaN", data.x_train_with_nan);
         renderSection("Después de DeleteNanRows", data.after_delete_nan);
@@ -73,7 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         headers.forEach(h => html += `<th>${h}</th>`);
         html += `</tr></thead><tbody>`;
 
-        // 🔹 Limitar a 10 filas
+        //  Limitar a 10 filas
         data.slice(0, 10).forEach(row => {
             html += `<tr>`;
             headers.forEach(h => html += `<td>${row[h]}</td>`);
