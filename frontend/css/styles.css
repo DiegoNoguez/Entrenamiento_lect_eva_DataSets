@@ -225,3 +225,209 @@ h1:hover {
         padding: 16px;
     }
 }
+
+/* indicadores del estado del data set */
+.hidden {
+    display: none;
+}
+
+.dataset-indicator {
+    margin-top: 10px;
+    color: #4ade80;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.menu-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Boton para reiniciar la sesion */
+.reset-btn {
+    margin-top: 10px;
+    background: transparent;
+    border: 1px solid #f87171;
+    color: #f87171;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.reset-btn:hover {
+    background: #f87171;
+    color: #000;
+}
+
+/* Contenedor de las gráficas */
+#plots-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    justify-content: center;
+    padding: clamp(1rem, 2vw, 2rem);
+}
+
+/* Cada gráfica individual */
+.plot-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: clamp(12px, 1.5vw, 20px);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.plot-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Imagen de la gráfica */
+.plot-card img {
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+    object-fit: contain;
+}
+
+/* Título de la gráfica */
+.plot-card h4 {
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+
+/* Contenedor del botón en el Hero */
+.actions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Estilo del botón Regresar */
+.btn-back {
+    background: rgba(255, 255, 255, 0.1); /* Fondo semi-transparente */
+    border: 1px solid var(--glass-border);
+    color: var(--text-color);
+    padding: 10px 24px;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+    
+    /* Para centrar texto e icono si agregas uno */
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-back:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateX(-5px); /* Pequeño movimiento a la izquierda */
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+}
+
+
+.result-section {
+    padding: 2rem;
+    max-width: 900px;
+    margin: auto;
+}
+
+.charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.charts img {
+    width: 100%;
+    border-radius: 12px;
+}
+  /* Estilos para tablas vistosas */
+        table.table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+
+        table.table th, table.table td {
+            border: 1px solid #ab0db1;
+            padding: 8px 12px;
+            text-align: center;
+        }
+
+        table.table th {
+            background-color: rgba(171, 13, 177, 0.2);
+            color: #ab0db1;
+            font-weight: bold;
+        }
+
+        table.table tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        table.table tr:nth-child(odd) {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Scroll horizontal para tablas anchas */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        h3 {
+            margin-top: 20px;
+            margin-bottom: 5px;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+.table-container {
+    margin-top: 2rem;
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(255,255,255,0.05);
+    font-size: 0.85rem;
+}
+
+.data-table th,
+.data-table td {
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 6px 8px;
+    text-align: left;
+}
+
+.data-table th {
+    background: rgba(255,255,255,0.15);
+    font-weight: bold;
+}
+
+.data-table tr:nth-child(even) {
+    background: rgba(255,255,255,0.03);
+}
+
+.section-title {
+    margin-top: 2.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}

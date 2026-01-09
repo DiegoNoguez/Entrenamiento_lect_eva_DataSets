@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>REGRESION LOGISTICA</title>
 
     <!-- CSS existente -->
-    <link rel="stylesheet" href="/frontend/css/styles.css"/>
+    <link rel="stylesheet" href="css/styles.css"/>
 
     <!-- Font Awesome (iconos) -->
     <link rel="stylesheet"
@@ -28,17 +28,29 @@
             <span>Selecciona tu DataSet</span>
             <small>CSV, TXT, O JSON</small>
         </label>
-        <p class="upload-status" id="uploadStatus">
-            Ningun Archivo Cargado
-        </p>
-    </section>
+        <p class="upload-status" id="uploadStatus"></p>
+        
+        <div id="datasetIndicator" class="dataset-indicator hidden">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>Dataset listo para procesar</span>
+        </div>
 
+        <button id="resetDataset" class="reset-btn hidden">
+        Cambiar Dataset
+        </button>
+
+    </section>
     <br/>
     <!-- CONTENEDOR DE BOTONES -->
     <section class="menu">
         <a href="regresion_log.html" class="menu-btn">
             <span>Regresión Logística</span>
             <i class="fa-solid fa-chart-line"></i>
+        </a>
+
+        <a href="visualizacion.html" class="menu-btn" data-require-dataset="true">
+            <span>Visualización del DataSet</span>
+            <i class="fa-solid fa-chart-pie"></i>
         </a>
 
         <a href="division_data.html" class="menu-btn">
@@ -51,13 +63,12 @@
             <i class="fa-solid fa-gears"></i>
         </a>
 
-        <a href="visualizacion.html" class="menu-btn">
-            <span>Visualización del DataSet</span>
-            <i class="fa-solid fa-chart-pie"></i>
+        <a href="pipelinesPersonalizados.html" class="menu-btn">
+            <span>Creación de Transformadores y pipelines</span>
+            <i class="fa-solid fa-project-diagram"></i>
         </a>
-
         <a href="eval_model.html" class="menu-btn">
-            <span>Evaluación del Modelo</span>
+            <span>Evaluación del Resultados</span>
             <i class="fa-solid fa-check-circle"></i>
         </a>
     </section>
@@ -65,6 +76,6 @@
     © 2025 — Diego López · Todos los derechos reservados
     </footer>
 
-    <script src="/frontend/js/cargar_archivo.js"></script>
+    <script src="js/cargar_archivo.js" defer></script>
 </body>
 </html>
