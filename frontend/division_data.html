@@ -3,23 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <title>División del DataSet</title>
-    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/divid_datset.css" />
   </head>
   <body>
+    <!-- HERO PRINCIPAL -->
     <section class="hero">
-      <div class="hero-bg"></div>
       <h1 class="glass">División del DataSet</h1>
     </section>
 
-    <section class="glass result-section">
-      <p id="status">Procesando dataset...</p>
+    <!-- SECCIÓN DE RESULTADOS -->
+    <section class="result-section division">
+      <p id="status" class="status-placeholder">Procesando dataset...</p>
 
-      <div id="splitInfo" class="hidden"></div>
+      <div id="splitInfo" class="split-card hidden"></div>
 
       <div class="charts">
-        <img id="trainChart" />
-        <img id="valChart" />
-        <img id="testChart" />
+        <div class="plot-card">
+          <h4>Train</h4>
+          <img id="trainChart" />
+        </div>
+        <div class="plot-card">
+          <h4>Validación</h4>
+          <img id="valChart" />
+        </div>
+        <div class="plot-card">
+          <h4>Test</h4>
+          <img id="testChart" />
+        </div>
       </div>
     </section>
 

@@ -269,24 +269,6 @@ def save_confusion_matrix_image(cm, labels, media_root):
 
     return f"/media/evaluations/{filename}"
 
-def generate_correlation_plots(df, dataset_id):
-    plots = []
-
-    # Columnas exactas que queremos en el scatter matrix
-    attributes = ["same_srv_rate", "dst_host_srv_count", "class", "dst_host_same_srv_rate"]
-
-    # Verificar que existan en el DataFrame
-    attributes = [col for col in attributes if col in df.columns]
-    if not attributes:
-        return plots
-
-    # Crear figura scatter_matrix
-    fig = scatter_matrix(
-        df[attributes],
-        diagonal="hist",
-        figsize=(12, 8)
-    )
-
     plt.suptitle("Scatter Matrix", fontsize=16, fontweight="bold")
 
     # Guardar en buffer y convertir a base64
@@ -304,10 +286,6 @@ def generate_correlation_plots(df, dataset_id):
     })
 
     return plots
-
-# =========================
-# Funciones de visualización
-# =========================
 
 def generate_plots_base64(df):
     """Genera histogramas/barras por columna y devuelve base64"""
@@ -336,70 +314,66 @@ def generate_plots_base64(df):
         })
     return plots
 
+def generate_scatter_matrix_base64(df):
+    from pandas.plotting import scatter_matrix
 
-def generate_scatter_matrix_base64(df, attributes=None):
-    """Genera scatter_matrix en base64. Si no se pasan atributos, usa columnas numéricas"""
-    plots = []
-    if attributes is None:
-        attributes = df.select_dtypes(include=[np.number]).columns.tolist()
-    else:
-        attributes = [col for col in attributes if col in df.columns]
+    attributes = [
+        "same_srv_rate",
+        "dst_host_srv_count",
+        "class",
+        "dst_host_same_srv_rate"
+    ]
 
+    attributes = [c for c in attributes if c in df.columns]
     if not attributes:
-        return plots
+        return []
 
-    fig = scatter_matrix(df[attributes], diagonal="hist", figsize=(12, 8))
+    scatter_matrix(df[attributes], figsize=(12,8), diagonal="hist")
     plt.suptitle("Scatter Matrix", fontsize=16, fontweight="bold")
 
     buf = BytesIO()
-    plt.savefig(buf, format='png', dpi=100)
+    plt.tight_layout()
+    plt.savefig(buf, format="png", dpi=100)
     plt.close()
     buf.seek(0)
-    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
 
-    plots.append({
+    return [{
         "type": "scatter_matrix",
         "title": "Scatter Matrix",
         "columns": attributes,
-        "image_base64": f"data:image/png;base64,{img_base64}",
-        "url": ""
-    })
-    return plots
+        "image_base64": f"data:image/png;base64,{base64.b64encode(buf.read()).decode()}"
+    }]
 
+def generate_correlation_matrix_base64(df):
+    numeric_df = df.select_dtypes(include=[np.number])
+    if numeric_df.empty:
+        return []
 
-def generate_confusion_matrix_base64(y_true, y_pred):
-    """Genera matriz de confusión en base64"""
-    labels = sorted(np.unique(y_true))
-    cm = confusion_matrix(y_true, y_pred, labels=labels)
+    corr = numeric_df.corr()
 
-    fig, ax = plt.subplots(figsize=(5,4))
-    cax = ax.matshow(cm, cmap="Blues")
-    plt.title("Matriz de Confusión")
-    plt.xlabel("Predicción")
-    plt.ylabel("Real")
+    fig, ax = plt.subplots(figsize=(10,10))
+    cax = ax.matshow(corr, cmap="coolwarm")
     plt.colorbar(cax)
-    ax.set_xticks(range(len(labels)))
-    ax.set_yticks(range(len(labels)))
-    ax.set_xticklabels(labels)
-    ax.set_yticklabels(labels)
-    for i in range(len(labels)):
-        for j in range(len(labels)):
-            ax.text(j, i, str(cm[i,j]), ha="center", va="center")
+
+    ax.set_xticks(range(len(corr.columns)))
+    ax.set_yticks(range(len(corr.columns)))
+    ax.set_xticklabels(corr.columns, rotation=90)
+    ax.set_yticklabels(corr.columns)
+
+    plt.title("Matriz de Correlación", fontsize=16, fontweight="bold")
 
     buf = BytesIO()
     plt.tight_layout()
-    plt.savefig(buf, format='png', dpi=100)
+    plt.savefig(buf, format="png", dpi=100)
     plt.close()
     buf.seek(0)
-    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
 
     return [{
-        "type": "confusion_matrix",
-        "title": "Matriz de Confusión",
-        "image_base64": f"data:image/png;base64,{img_base64}",
-        "url": ""
+        "type": "correlation_matrix",
+        "title": "Matriz de Correlación",
+        "columns": list(corr.columns),
+        "image_base64": f"data:image/png;base64,{base64.b64encode(buf.read()).decode()}"
     }]
-
 
 # Clases para usar en el uso de creacion de los pipelines y transformadores
 class DeleteNanRows(BaseEstimator, TransformerMixin):
@@ -496,6 +470,9 @@ def visualizar_dataset(request):
     if request.method != "POST":
         return JsonResponse({"error": "Método no permitido"}, status=405)
 
+    # ===============================
+    # 1. Leer JSON
+    # ===============================
     try:
         body = json.loads(request.body.decode("utf-8"))
     except Exception:
@@ -507,48 +484,54 @@ def visualizar_dataset(request):
     if not dataset_id:
         return JsonResponse({"error": "dataset_id requerido"}, status=400)
 
+    # ===============================
+    # 2. Localizar dataset
+    # ===============================
     datasets_dir = os.path.join(settings.MEDIA_ROOT, "datasets")
     archivo = next((f for f in os.listdir(datasets_dir) if f.startswith(dataset_id)), None)
+
     if not archivo:
         return JsonResponse({"error": "Dataset no encontrado"}, status=404)
 
     file_path = os.path.join(datasets_dir, archivo)
 
-    # Cargar dataset NSL-KDD
+    # ===============================
+    # 3. Cargar dataset (NSL-KDD)
+    # ===============================
     df = load_kdd_dataset(file_path)
+
+    # Normalizar nombres
     df.columns = [c.strip().lower() for c in df.columns]
 
-    # Previsualización
-    preview = {
-        "columns": list(df.columns),
-        "rows": df.head(options.get("preview_rows", 10)).to_dict(orient="records")
-    }
+    # ===============================
+    # 4. Visualizaciones
+    # ===============================
 
-    # Info
-    info = dataframe_info(df)
-
-    # Plots
+    # Histogramas / Barras por columna (base64)
     plots = generate_plots_base64(df)
-    correlation_plots = generate_scatter_matrix_base64(df, attributes=[
-        "same_srv_rate", "dst_host_srv_count", "class", "dst_host_same_srv_rate"
-    ])
 
-    # Matriz de confusión dummy (solo ejemplo)
-    confusion_matrix_plot = generate_confusion_matrix_base64(
-        y_true=df["class"][:50],
-        y_pred=df["class"][:50]
-    )
+    # Scatter Matrix EXACTO al notebook
+    scatter_plots = generate_scatter_matrix_base64(df)
 
+    # Matriz de correlación (heatmap)
+    correlation_matrix = generate_correlation_matrix_base64(df)
+
+    correlation_plots = scatter_plots + correlation_matrix
+
+    # 5. Respuesta
     response = {
         "dataset_id": dataset_id,
         "filename": archivo,
         "rows": int(df.shape[0]),
         "columns": int(df.shape[1]),
-        "preview": preview,
-        "info": info,
+        "preview": {
+            "columns": list(df.columns),
+            "rows": df_to_json_safe(df, max_rows=options.get("preview_rows", 10))
+        },
+        "info": dataframe_info(df),
         "plots": plots,
         "correlation_plots": correlation_plots,
-        "confusion_matrix": confusion_matrix_plot
+        "confusion_matrix": []  #  SOLO SE USA EN EVALUACIÓN
     }
 
     return JsonResponse(response)
@@ -913,7 +896,7 @@ def evaluar_modelo(request):
     X_test_prep = full_pipeline.transform(X_test)
 
     # Modelo
-    clf = LogisticRegression(max_iter=10000, n_jobs=-1)
+    clf = LogisticRegression(max_iter=15000, n_jobs=-1)
     clf.fit(X_train_prep, y_train)
 
     # Predicciones
