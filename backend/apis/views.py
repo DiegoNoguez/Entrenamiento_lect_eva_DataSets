@@ -14,7 +14,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt 
 import math
-import seaborn as sns
+import threading
 from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import RobustScaler, OneHotEncoder
@@ -31,6 +31,7 @@ COLOR_MAP = {
     "validation": "#FFC107",  # amarillo
     "test": "#2196F3"         # azul
 }
+TASKS = {}
 # Evitar errores de GUI en el servidor
 matplotlib.use('Agg')
 def detect_format(filename, head_text):
@@ -374,6 +375,113 @@ def generate_correlation_matrix_base64(df):
         "columns": list(corr.columns),
         "image_base64": f"data:image/png;base64,{base64.b64encode(buf.read()).decode()}"
     }]
+
+def run_evaluacion_modelo(task_id, dataset_id):
+    try:
+        TASKS[task_id]["message"] = "Buscando dataset"
+        TASKS[task_id]["progress"] = 5
+
+        datasets_dir = os.path.join(settings.MEDIA_ROOT, "datasets")
+        archivo = next((f for f in os.listdir(datasets_dir) if f.startswith(dataset_id)), None)
+        if not archivo:
+            raise Exception("Dataset no encontrado")
+
+        data_path = os.path.join(datasets_dir, archivo)
+
+        TASKS[task_id]["message"] = "Cargando dataset"
+        TASKS[task_id]["progress"] = 10
+
+        df = load_kdd_dataset(data_path)
+        df.columns = [str(c).strip().lower() for c in df.columns]
+
+        if "class" not in df.columns:
+            raise Exception('El dataset debe contener la columna "class"')
+
+        TASKS[task_id]["message"] = "Dividiendo datos"
+        TASKS[task_id]["progress"] = 20
+
+        train_set, val_set, test_set = train_val_test_split(
+            df,
+            test_size=0.4,
+            val_size=0.2,
+            stratify="class"
+        )
+
+        X_train = train_set.drop("class", axis=1)
+        y_train = train_set["class"]
+        X_val = val_set.drop("class", axis=1)
+        y_val = val_set["class"]
+        X_test = test_set.drop("class", axis=1)
+        y_test = test_set["class"]
+
+        TASKS[task_id]["message"] = "Preparando pipeline"
+        TASKS[task_id]["progress"] = 35
+
+        num_attribs = list(X_train.select_dtypes(exclude=["object"]))
+        cat_attribs = list(X_train.select_dtypes(include=["object"]))
+
+        num_pipeline = Pipeline([
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", RobustScaler())
+        ])
+
+        full_pipeline = ColumnTransformer([
+            ("num", num_pipeline, num_attribs),
+            ("cat", OneHotEncoder(handle_unknown="ignore"), cat_attribs)
+        ])
+
+        X_train_prep = full_pipeline.fit_transform(X_train)
+        X_val_prep = full_pipeline.transform(X_val)
+        X_test_prep = full_pipeline.transform(X_test)
+
+        TASKS[task_id]["message"] = "Entrenando modelo"
+        TASKS[task_id]["progress"] = 60
+
+        clf = LogisticRegression(max_iter=5000)
+        clf.fit(X_train_prep, y_train)
+
+        TASKS[task_id]["message"] = "Evaluando modelo"
+        TASKS[task_id]["progress"] = 80
+
+        y_val_pred = clf.predict(X_val_prep)
+        y_test_pred = clf.predict(X_test_prep)
+
+        acc_val = accuracy_score(y_val, y_val_pred)
+        acc_test = accuracy_score(y_test, y_test_pred)
+        acc_diff = abs(acc_val - acc_test)
+
+        report_test = classification_report(y_test, y_test_pred, output_dict=True)
+        conf_matrix = confusion_matrix(y_test, y_test_pred)
+        labels = sorted(y_test.unique())
+
+        conf_matrix_url = save_confusion_matrix_image(
+            conf_matrix,
+            labels,
+            settings.MEDIA_ROOT
+        )
+
+        TASKS[task_id] = {
+            "status": "done",
+            "progress": 100,
+            "result": {
+                "dataset_id": dataset_id,
+                "model": "LogisticRegression",
+                "metrics": {
+                    "accuracy_validation": acc_val,
+                    "accuracy_test": acc_test,
+                    "accuracy_difference": acc_diff,
+                    "classification_report_test": report_test,
+                    "confusion_matrix_image": conf_matrix_url
+                }
+            }
+        }
+
+    except Exception as e:
+        TASKS[task_id] = {
+            "status": "error",
+            "error": str(e)
+        }
+
 
 # Clases para usar en el uso de creacion de los pipelines y transformadores
 class DeleteNanRows(BaseEstimator, TransformerMixin):
@@ -831,6 +939,18 @@ def pipelines_personalizados_comprimido(request):
 # Evaluacion de resultados del modelo 
 @csrf_exempt
 def evaluar_modelo(request):
+
+    # === CORS preflight (lo dejamos por seguridad) ===
+    if request.method == "OPTIONS":
+        origin = request.headers.get("Origin")
+        response = JsonResponse({})
+        if origin in settings.CORS_ALLOWED_ORIGINS:
+            response["Access-Control-Allow-Origin"] = origin
+        response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        response["Access-Control-Allow-Credentials"] = "true"
+        return response
+
     if request.method != "POST":
         return JsonResponse({"error": "Método no permitido"}, status=405)
 
@@ -843,102 +963,30 @@ def evaluar_modelo(request):
     if not dataset_id:
         return JsonResponse({"error": "dataset_id requerido"}, status=400)
 
-    # Buscar dataset
-    datasets_dir = os.path.join(settings.MEDIA_ROOT, "datasets")
-    archivo = next((f for f in os.listdir(datasets_dir) if f.startswith(dataset_id)), None)
-    if not archivo:
-        return JsonResponse({"error": "Dataset no encontrado"}, status=404)
+    # Crear task
+    task_id = uuid.uuid4().hex
 
-    data_path = os.path.join(datasets_dir, archivo)
-
-    # Cargar dataset
-    df = load_kdd_dataset(data_path)
-    df.columns = [str(c).strip().lower() for c in df.columns]
-
-    if "class" not in df.columns:
-        return JsonResponse({"error": 'El dataset debe contener la columna "class"'}, status=400)
-
-    # Split
-    train_set, val_set, test_set = train_val_test_split(
-        df,
-        test_size=0.4,
-        val_size=0.2,
-        stratify="class"
-    )
-
-    # X / y
-    X_train = train_set.drop("class", axis=1)
-    y_train = train_set["class"]
-
-    X_val = val_set.drop("class", axis=1)
-    y_val = val_set["class"]
-
-    X_test = test_set.drop("class", axis=1)
-    y_test = test_set["class"]
-
-    # Pipeline
-    num_attribs = list(X_train.select_dtypes(exclude=["object"]))
-    cat_attribs = list(X_train.select_dtypes(include=["object"]))
-
-    num_pipeline = Pipeline([
-        ("imputer", SimpleImputer(strategy="median")),
-        ("scaler", RobustScaler())
-    ])
-
-    full_pipeline = ColumnTransformer([
-        ("num", num_pipeline, num_attribs),
-        ("cat", OneHotEncoder(handle_unknown="ignore"), cat_attribs)
-    ])
-
-    # Fit SOLO con train
-    X_train_prep = full_pipeline.fit_transform(X_train)
-    X_val_prep = full_pipeline.transform(X_val)
-    X_test_prep = full_pipeline.transform(X_test)
-
-    # Modelo
-    clf = LogisticRegression(max_iter=15000, n_jobs=-1)
-    clf.fit(X_train_prep, y_train)
-
-    # Predicciones
-    y_val_pred = clf.predict(X_val_prep)
-    y_test_pred = clf.predict(X_test_prep)
-
-    # Métricas
-    acc_val = accuracy_score(y_val, y_val_pred)
-    acc_test = accuracy_score(y_test, y_test_pred)
-    acc_diff = abs(acc_val - acc_test)
-
-    report_test = classification_report(
-        y_test,
-        y_test_pred,
-        output_dict=True
-    )
-
-    conf_matrix = confusion_matrix(y_test, y_test_pred)
-    labels = sorted(y_test.unique())
-
-    conf_matrix_url = save_confusion_matrix_image(
-        conf_matrix,
-        labels,
-        settings.MEDIA_ROOT
-    )
-
-    # Respuesta
-    response = {
-        "dataset_id": dataset_id,
-        "model": "LogisticRegression",
-        "split_sizes": {
-            "train": len(train_set),
-            "validation": len(val_set),
-            "test": len(test_set)
-        },
-        "metrics": {
-            "accuracy_validation": acc_val,
-            "accuracy_test": acc_test,
-            "accuracy_difference": acc_diff,
-            "classification_report_test": report_test,
-            "confusion_matrix_image": conf_matrix_url
-        }
+    TASKS[task_id] = {
+        "status": "running",
+        "progress": 0,
+        "message": "Iniciando evaluación"
     }
 
-    return JsonResponse(response)
+    # Lanzar proceso en background
+    threading.Thread(
+        target=run_evaluacion_modelo,
+        args=(task_id, dataset_id),
+        daemon=True
+    ).start()
+
+    # RESPUESTA RÁPIDA (clave para Cloudflare)
+    return JsonResponse({
+        "task_id": task_id,
+        "status": "running"
+    })
+
+def estado_modelo(request, task_id):
+    task = TASKS.get(task_id)
+    if not task:
+        return JsonResponse({"error": "Task no encontrada"}, status=404)
+    return JsonResponse(task)
