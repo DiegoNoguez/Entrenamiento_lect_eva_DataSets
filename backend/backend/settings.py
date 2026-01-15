@@ -64,8 +64,8 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:8080',
     'http://localhost:5000',
     'https://entrenamiento-lect-eva-datasets.onrender.com',
-    'https://t-71r6n9of.tunn.dev',
-    'https://tied-strand-acquisition-griffin.trycloudflare.com' # cambiar con cada que se abra el tunel 
+    'https://t-71r6n9of.tunn.dev', # cambiar con cada que se abra el tunel 
+    'https://lectura-datasets.onrender.com'
 ]
 
 CORS_ALLOW_CREDENTIALS = True

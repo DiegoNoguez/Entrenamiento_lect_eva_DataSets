@@ -24,6 +24,18 @@ from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from pandas.plotting import scatter_matrix
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    confusion_matrix,
+    auc
+)
+from sklearn.metrics import roc_curve
+from sklearn.preprocessing import label_binarize
+
 # Funciones auxiliares y para los enpoints 
 # Paleta de colores para los histogramas para division del dataset 
 COLOR_MAP = {
@@ -32,8 +44,7 @@ COLOR_MAP = {
     "test": "#2196F3"         # azul
 }
 TASKS = {}
-# Evitar errores de GUI en el servidor
-matplotlib.use('Agg')
+
 def detect_format(filename, head_text):
     ext = os.path.splitext(filename)[1].lower()
 
@@ -244,6 +255,11 @@ def df_to_json_safe(df, max_rows=10):
     return df_preview.to_dict(orient="records")
 
 def save_confusion_matrix_image(cm, labels, media_root):
+
+    # No se puede dibujar una matriz si no es al menos 2x2
+    if cm.ndim != 2 or cm.shape[0] < 2 or cm.shape[1] < 2:
+        return None
+
     os.makedirs(os.path.join(media_root, "evaluations"), exist_ok=True)
 
     filename = f"confusion_{uuid.uuid4().hex}.png"
@@ -256,11 +272,14 @@ def save_confusion_matrix_image(cm, labels, media_root):
     plt.ylabel("Real")
     plt.colorbar()
 
-    plt.xticks(range(len(labels)), labels)
-    plt.yticks(range(len(labels)), labels)
+    # Ajustar labels exactamente al tamaño de la matriz
+    tick_labels = labels[:cm.shape[0]]
 
-    for i in range(len(labels)):
-        for j in range(len(labels)):
+    plt.xticks(range(len(tick_labels)), tick_labels)
+    plt.yticks(range(len(tick_labels)), tick_labels)
+
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
             plt.text(j, i, cm[i, j],
                      ha="center", va="center")
 
@@ -269,24 +288,6 @@ def save_confusion_matrix_image(cm, labels, media_root):
     plt.close()
 
     return f"/media/evaluations/{filename}"
-
-    plt.suptitle("Scatter Matrix", fontsize=16, fontweight="bold")
-
-    # Guardar en buffer y convertir a base64
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=100)
-    plt.close()
-    buf.seek(0)
-    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-
-    plots.append({
-        "type": "scatter_matrix",
-        "title": "Scatter Matrix",
-        "columns": attributes,
-        "image_base64": f"data:image/png;base64,{img_base64}"
-    })
-
-    return plots
 
 def generate_plots_base64(df):
     """Genera histogramas/barras por columna y devuelve base64"""
@@ -376,6 +377,36 @@ def generate_correlation_matrix_base64(df):
         "image_base64": f"data:image/png;base64,{base64.b64encode(buf.read()).decode()}"
     }]
 
+def save_roc_curve_simple(y_true, y_score, media_root):
+    """
+    Curva ROC simple (una sola gráfica)
+    """
+    # Si viene multiclase, tomamos la clase positiva
+    if y_score.ndim > 1:
+        y_score = y_score[:, 1] if y_score.shape[1] > 1 else y_score.ravel()
+
+    os.makedirs(os.path.join(media_root, "evaluations"), exist_ok=True)
+
+    filename = f"roc_{uuid.uuid4().hex}.png"
+    filepath = os.path.join(media_root, "evaluations", filename)
+
+    fpr, tpr, _ = roc_curve(y_true, y_score)
+    roc_auc = auc(fpr, tpr)
+
+    plt.figure(figsize=(6, 5))
+    plt.plot(fpr, tpr, label=f"AUC = {roc_auc:.3f}")
+    plt.plot([0, 1], [0, 1], "k--")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("Curva ROC")
+    plt.legend(loc="lower right")
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(filepath)
+    plt.close()
+
+    return f"/media/evaluations/{filename}"
+
 def run_evaluacion_modelo(task_id, dataset_id):
     try:
         TASKS[task_id]["message"] = "Buscando dataset"
@@ -397,6 +428,17 @@ def run_evaluacion_modelo(task_id, dataset_id):
         if "class" not in df.columns:
             raise Exception('El dataset debe contener la columna "class"')
 
+        # =====================================================
+        #  SOLUCIÓN CLAVE: MAPEO DE CLASES
+        # =====================================================
+        df["class"] = df["class"].map({
+            "normal": 0,
+            "anomaly": 1
+        })
+
+        if df["class"].isnull().any():
+            raise Exception("Valores inválidos en la columna class")
+
         TASKS[task_id]["message"] = "Dividiendo datos"
         TASKS[task_id]["progress"] = 20
 
@@ -409,8 +451,10 @@ def run_evaluacion_modelo(task_id, dataset_id):
 
         X_train = train_set.drop("class", axis=1)
         y_train = train_set["class"]
+
         X_val = val_set.drop("class", axis=1)
         y_val = val_set["class"]
+
         X_test = test_set.drop("class", axis=1)
         y_test = test_set["class"]
 
@@ -437,32 +481,54 @@ def run_evaluacion_modelo(task_id, dataset_id):
         TASKS[task_id]["message"] = "Entrenando modelo"
         TASKS[task_id]["progress"] = 60
 
-        clf = LogisticRegression(max_iter=5000)
+        clf = LogisticRegression(
+            max_iter=5000,
+            solver="lbfgs",
+            n_jobs=-1
+        )
         clf.fit(X_train_prep, y_train)
 
         TASKS[task_id]["message"] = "Evaluando modelo"
         TASKS[task_id]["progress"] = 80
 
+        # ===============================
+        # PREDICCIONES
+        # ===============================
         y_val_pred = clf.predict(X_val_prep)
         y_test_pred = clf.predict(X_test_prep)
 
+        y_test_proba = clf.predict_proba(X_test_prep)[:, 1]
+
+        # ===============================
+        # MÉTRICAS
+        # ===============================
         acc_val = accuracy_score(y_val, y_val_pred)
         acc_test = accuracy_score(y_test, y_test_pred)
         acc_diff = abs(acc_val - acc_test)
 
-        report_test = classification_report(y_test, y_test_pred, output_dict=True)
+        precision = precision_score(y_test, y_test_pred)
+        recall = recall_score(y_test, y_test_pred)
+        f1 = f1_score(y_test, y_test_pred)
+        roc_auc = roc_auc_score(y_test, y_test_proba)
+
         conf_matrix = confusion_matrix(y_test, y_test_pred)
-        labels = sorted(y_test.unique())
 
         conf_matrix_url = save_confusion_matrix_image(
             conf_matrix,
-            labels,
+            labels=["Normal", "Anomaly"],
+            media_root=settings.MEDIA_ROOT
+        )
+
+        roc_url = save_roc_curve_simple(
+            y_test,
+            y_test_proba,
             settings.MEDIA_ROOT
         )
 
         TASKS[task_id] = {
             "status": "done",
             "progress": 100,
+            "message": "Evaluación completada",
             "result": {
                 "dataset_id": dataset_id,
                 "model": "LogisticRegression",
@@ -470,8 +536,12 @@ def run_evaluacion_modelo(task_id, dataset_id):
                     "accuracy_validation": acc_val,
                     "accuracy_test": acc_test,
                     "accuracy_difference": acc_diff,
-                    "classification_report_test": report_test,
-                    "confusion_matrix_image": conf_matrix_url
+                    "precision": precision,
+                    "recall": recall,
+                    "f1_score": f1,
+                    "roc_auc": roc_auc,
+                    "confusion_matrix_image": conf_matrix_url,
+                    "roc_curve_image": roc_url
                 }
             }
         }
@@ -481,6 +551,8 @@ def run_evaluacion_modelo(task_id, dataset_id):
             "status": "error",
             "error": str(e)
         }
+
+
 
 
 # Clases para usar en el uso de creacion de los pipelines y transformadores
@@ -985,6 +1057,7 @@ def evaluar_modelo(request):
         "status": "running"
     })
 
+@csrf_exempt
 def estado_modelo(request, task_id):
     task = TASKS.get(task_id)
     if not task:
